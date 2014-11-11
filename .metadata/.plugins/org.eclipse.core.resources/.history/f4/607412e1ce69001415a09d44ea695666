@@ -1,0 +1,167 @@
+import javax.swing.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Ellipse2D.Double;
+import java.util.*;
+import java.awt.image.BufferedImage;
+ 
+
+public class VectorGame extends JFrame{
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -4834047772268744965L;
+	public static VectorGame game;
+	ArrayList<Circle> bodies = new ArrayList<Circle>();
+	public Image dB;
+	public Graphics gB;
+    public VectorGame(){
+    	super("Test");
+    	setSize(800,600);
+    	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    	setVisible(true);
+    	setLayout(null);
+ 		Thread update = new Thread(() ->{
+ 				while(true){
+ 					for(Body c : bodies)
+ 						c.update(1);
+ 					for(int i = 0;i < bodies.size();i++)
+ 						for(int i2 = i + 1;i2 < bodies.size();i2++){
+ 							if(bodies.get(i2) instanceof Circle){
+ 								Manifold m = new Manifold();
+ 								m.a = bodies.get(i);
+ 								m.b = bodies.get(i2);
+ 								if(bodies.get(i).collide(m)){
+ 									ResolveCollision(m);
+ 								}
+ 							}
+ 						}
+                try{
+                    Thread.sleep((long)Constants.updateDelay);
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+ 		});
+ 		Thread draw = new Thread(() -> {
+                while(true) {
+                    repaint();
+                    try {
+                        Thread.sleep((long)Constants.frameDelay);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+ 		});
+ 		update.start();
+ 		draw.start();
+ 		bodies.add(new Circle(200,200,100,100));
+        System.out.println(Constants.accelerationA);
+        Constants.accelerationA.mult(bodies.get(0).mass);
+        Constants.accelerationD.mult(bodies.get(0).mass);
+        System.out.println(Constants.accelerationA);
+        bodies.add(new Circle(250,450,100,100));
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch(e.getKeyCode()) {
+                    case KeyEvent.VK_D:
+                        if(!bodies.get(0).forces.contains(Constants.accelerationD))
+                            bodies.get(0).forces.add(Constants.accelerationD);
+                        break;
+                    case KeyEvent.VK_A:
+                        if(!bodies.get(0).forces.contains(Constants.accelerationA))
+                            bodies.get(0).forces.add(Constants.accelerationA);
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                switch(e.getKeyCode()){
+                    case KeyEvent.VK_D:
+                        bodies.get(0).forces.remove(Constants.accelerationD);
+                        break;
+                    case KeyEvent.VK_A:
+                        bodies.get(0).forces.remove(Constants.accelerationA);
+                }
+            }
+        });
+ 		repaint();
+ 		addMouseListener(new MouseListener() {
+			
+			@Override
+			public void mouseReleased(MouseEvent arg0) {
+	
+			}
+			
+			@Override
+			public void mousePressed(MouseEvent arg0) {
+				
+			}
+			
+			@Override
+			public void mouseExited(MouseEvent arg0) {
+				
+			}
+			
+			@Override
+			public void mouseEntered(MouseEvent arg0) {
+				
+				
+			}
+			
+			@Override
+			public void mouseClicked(MouseEvent arg0) {
+				int size = (int)(Math.random() * 50 + 25);
+				Color c = new Color();
+				bodies.add(new Circle(arg0.getX(),arg0.getY(),size,size));
+				
+			}
+		});
+    }
+    public static void main(String[] args) {
+        game = new VectorGame();
+    }
+    public static GridBagConstraints getConstraints(int x,int y,int width,int height){
+    	GridBagConstraints c = new GridBagConstraints();
+    	c.gridx = x;
+    	c.gridy = y;
+    	c.gridwidth = width;
+    	c.gridheight = height;
+        return c;
+    }
+    public void paint(Graphics g){
+    	//super.paint(g);
+    	if(dB == null || dB.getWidth(null) != getWidth() || dB.getHeight(null) != getHeight()){
+    		dB = createImage(getWidth(),getHeight());
+    		gB = dB.getGraphics();
+    	}
+    	gB.setColor(Color.WHITE);
+    	gB.fillRect(0,0,getWidth(),getHeight());
+    	for(Circle c : bodies){
+    		c.draw(gB);
+    	}
+    	g.drawImage(dB,0,0,null);
+    }
+    public void ResolveCollision(Manifold m){
+    	Vector rv = Vector.subVectors(m.b.speed,m.a.speed);
+		double velAlongNormal = Vector.dotProduct(rv,m.normal);
+		if(velAlongNormal > 0){
+			return;
+		}
+		double e = Math.min(m.a.restituion,m.b.restituion);
+		double j = -(1 + e) * velAlongNormal;
+		j /= 1 / m.a.mass + 1 / m.b.mass;
+		Vector impulse = Vector.multVector(m.normal, j);
+		m.a.speed.sub(Vector.multVector(impulse,1 / m.a.mass)); 
+		m.b.speed.add(Vector.multVector(impulse, 1 / m.b.mass));
+    }
+}
+

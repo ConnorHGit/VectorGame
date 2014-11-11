@@ -1,0 +1,141 @@
+/**
+ * GridBagLayoutTest.java
+ *
+ *
+ * Connor Hillman
+ * 2014/11/7
+ */
+import javax.swing.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Ellipse2D.Double;
+import java.util.*;
+import java.awt.image.BufferedImage;
+ 
+
+public class VectorGame extends JFrame{
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -4834047772268744965L;
+	public static VectorGame game;
+	ArrayList<Circle> circles = new ArrayList<Circle>();
+	public Image dB;
+	public Graphics gB;
+    public VectorGame(){
+    	super("Test");
+    	setSize(800,600);
+    	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    	setVisible(true);
+    	setLayout(null);
+ 		Thread update = new Thread(() ->{
+ 				while(true){
+ 					for(Circle c : circles)
+ 						c.update(1);
+ 					for(int i = 0;i < circles.size();i++)
+ 						for(int i2 = i + 1;i2 < circles.size();i2++){
+ 							if(circles.get(i2) instanceof Circle){
+ 								Manifold m = new Manifold();
+ 								m.a = circles.get(i);
+ 								m.b = circles.get(i2);
+ 								if(circles.get(i).collide(m)){
+ 									
+ 									
+ 								}
+ 							}
+ 						}
+                try{
+                    Thread.sleep((long)Constants.updateDelay);
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+            }
+ 		});
+ 		Thread draw = new Thread(() -> {
+                while(true) {
+                    repaint();
+                    try {
+                        Thread.sleep((long)Constants.frameDelay);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+ 		});
+ 		update.start();
+ 		draw.start();
+ 		circles.add(new Circle(200,200,100,100));
+        System.out.println(Constants.accelerationA);
+        Constants.accelerationA.mult(circles.get(0).mass);
+        Constants.accelerationD.mult(circles.get(0).mass);
+        System.out.println(Constants.accelerationA);
+        circles.add(new Circle(250,450,100,100));
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch(e.getKeyCode()) {
+                    case KeyEvent.VK_D:
+                        if(!circles.get(0).forces.contains(Constants.accelerationD))
+                            circles.get(0).forces.add(Constants.accelerationD);
+                        break;
+                    case KeyEvent.VK_A:
+                        if(!circles.get(0).forces.contains(Constants.accelerationA))
+                            circles.get(0).forces.add(Constants.accelerationA);
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                switch(e.getKeyCode()){
+                    case KeyEvent.VK_D:
+                        circles.get(0).forces.remove(Constants.accelerationD);
+                        break;
+                    case KeyEvent.VK_A:
+                        circles.get(0).forces.remove(Constants.accelerationA);
+                }
+            }
+        });
+ 		repaint();
+    }
+    public static void main(String[] args) {
+        game = new VectorGame();
+    }
+    public static GridBagConstraints getConstraints(int x,int y,int width,int height){
+    	GridBagConstraints c = new GridBagConstraints();
+    	c.gridx = x;
+    	c.gridy = y;
+    	c.gridwidth = width;
+    	c.gridheight = height;
+        return c;
+    }
+    public void paint(Graphics g){
+    	//super.paint(g);
+    	if(dB == null || dB.getWidth(null) != getWidth() || dB.getHeight(null) != getHeight()){
+    		dB = createImage(getWidth(),getHeight());
+    		gB = dB.getGraphics();
+    	}
+    	gB.setColor(Color.WHITE);
+    	gB.fillRect(0,0,getWidth(),getHeight());
+    	for(Circle c : circles){
+    		c.draw(gB);
+    	}
+    	g.drawImage(dB,0,0,null);
+    }
+    public void ResolveCollision(Manifold m){
+    	Vector rv = Vector.subVectors(m.b.speed,m.a.speed);
+		double velAlongNormal = Vector.dotProduct(rv,m.normal);
+		if(velAlongNormal > 0){
+			return;
+		}
+		double e = Math.min(m.a.restituion,m.b.restituion);
+		double j = -(1 + e) * velAlongNormal;
+		j /= 1 / m.a.mass + 1 / m.b.mass;
+    }
+}
+

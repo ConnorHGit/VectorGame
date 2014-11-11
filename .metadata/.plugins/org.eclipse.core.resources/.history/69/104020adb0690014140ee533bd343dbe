@@ -1,0 +1,7 @@
+
+public class Manifold {
+	public Body a;
+	public Body b;
+	public float penetration;
+	public Vector normal;
+}
